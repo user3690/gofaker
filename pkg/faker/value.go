@@ -69,7 +69,7 @@ func CreateRandomValue(
 
 	case strings.HasPrefix(kind, "bool"):
 		res := reflect.New(t.Type())
-		res.Elem().SetBool(v[0]&1 == 1)
+		res.Elem().SetBool(true)
 
 		return res.Elem()
 

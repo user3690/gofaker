@@ -14,6 +14,9 @@ func FakeStruct(ptrStruct any, depth uint8) {
 
 	// dereference underlying value
 	refStruct := ptrStructType.Elem()
+	if refStruct.Kind() != reflect.Struct {
+		panic("refStruct needs to be a struct")
+	}
 
 	fields := reflect.VisibleFields(refStruct)
 	values := reflect.ValueOf(ptrStruct).Elem()
