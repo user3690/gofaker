@@ -113,7 +113,6 @@ func fakeStructField(
 ) {
 	// time.Time struct special case cause of unexported fields
 	if field.Type.Name() == "Time" {
-		// TODO: create random time
 		newTime := time.Now()
 
 		currentPtrStructValues.FieldByIndex(field.Index).Set(reflect.ValueOf(newTime))
@@ -175,15 +174,24 @@ func fakeMapField(
 	newMap := reflect.MakeMap(mapField.Type())
 
 	key := reflect.New(mapField.Type().Key()).Elem()
-	if key.Kind() == reflect.Struct {
+	if key.Kind() == reflect.Pointer {
 		ptrKey := reflect.New(key.Type())
 		fakeStructRecursive(ptrKey.Interface(), currentPtrStruct, depth)
+		key.Set(ptrKey)
+	} else if key.Kind() == reflect.Struct {
+		ptrKey := reflect.New(key.Type())
+		fakeStructRecursive(ptrKey.Interface(), currentPtrStruct, depth)
+		key.Set(ptrKey.Elem())
 	} else {
 		key = CreateRandomValue(key)
 	}
 
 	value := reflect.New(mapField.Type().Elem()).Elem()
-	if value.Kind() == reflect.Struct {
+	if value.Kind() == reflect.Pointer {
+		ptrKey := reflect.New(value.Type().Elem())
+		fakeStructRecursive(ptrKey.Interface(), currentPtrStruct, depth)
+		value.Set(ptrKey)
+	} else if value.Kind() == reflect.Struct {
 		ptrValue := reflect.New(value.Type())
 		fakeStructRecursive(ptrValue.Interface(), currentPtrStruct, depth)
 		value.Set(ptrValue.Elem())

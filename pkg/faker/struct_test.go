@@ -3,6 +3,7 @@ package faker
 import (
 	"maps"
 	"reflect"
+	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -16,29 +17,58 @@ type EasyStruct struct {
 	Valid   bool
 }
 
+func (e EasyStruct) DeepCopy() EasyStruct {
+	return EasyStruct{
+		Id:      e.Id,
+		Name:    e.Name,
+		Price:   e.Price,
+		Average: e.Average,
+		Valid:   e.Valid,
+	}
+}
+
 type ComplexStruct struct {
 	Id             uint64
 	Name           string
 	SubStruct      ComplexSubStruct
+	MapPointer     map[uint8]*EasyStruct
 	MapStruct      map[uint8]EasyStruct
 	MapString      map[uint8]string
+	MapStructKey   map[MapKey]string
 	SliceStruct    []EasyStruct
 	SlicePrimitive []string
+}
+
+type MapKey struct {
+	Id1 int64
+	Id2 int64
 }
 
 func (c ComplexStruct) DeepCopy() ComplexStruct {
 	subStruct := c.SubStruct.DeepCopy()
 	mapStruct := maps.Clone(c.MapStruct)
 	mapString := maps.Clone(c.MapString)
+	mapStructKey := maps.Clone(c.MapStructKey)
 	sliceStruct := slices.Clone(c.SliceStruct)
 	slicePrimitive := slices.Clone(c.SlicePrimitive)
+
+	var newMapPointer map[uint8]*EasyStruct
+	if c.MapPointer != nil {
+		newMapPointer = make(map[uint8]*EasyStruct, len(c.MapPointer))
+		for k, v := range c.MapPointer {
+			newEasyStruct := v.DeepCopy()
+			newMapPointer[k] = &newEasyStruct
+		}
+	}
 
 	return ComplexStruct{
 		Id:             c.Id,
 		Name:           c.Name,
 		SubStruct:      subStruct,
+		MapPointer:     newMapPointer,
 		MapStruct:      mapStruct,
 		MapString:      mapString,
+		MapStructKey:   mapStructKey,
 		SliceStruct:    sliceStruct,
 		SlicePrimitive: slicePrimitive,
 	}
@@ -120,5 +150,25 @@ func TestFakeStruct(t *testing.T) {
 	complexStructCopy := complexStruct.DeepCopy()
 	if !reflect.DeepEqual(complexStruct, complexStructCopy) {
 		t.Errorf("Something wrong while creating random struct")
+	}
+}
+
+func BenchmarkDeepCopy(b *testing.B) {
+	var complexStruct, complexStructCopy ComplexStruct
+	FakeStruct(&complexStruct, 5)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		complexStructCopy = complexStruct.DeepCopy()
+	}
+
+	runtime.KeepAlive(complexStructCopy)
+}
+
+func BenchmarkFakeStruct(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var complexStruct ComplexStruct
+		FakeStruct(&complexStruct, 5)
 	}
 }
